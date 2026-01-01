@@ -1,14 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { envConfig } from 'src/config/envs';
 import Stripe from 'stripe';
 import { ProcessPaymentDto } from './dto/process-payment.dto';
+import { ClientProxy } from '@nestjs/microservices';
+import { NATS_SERVICE } from 'src/transport/service';
 
 @Injectable()
 export class PaymentsService {
   private stripe: Stripe;
 
-  constructor() {
+  constructor(@Inject(NATS_SERVICE) private client: ClientProxy) {
     this.stripe = new Stripe(envConfig.stripeSecretKey);
   }
 
@@ -67,7 +69,12 @@ export class PaymentsService {
 
     switch (event.type) {
       case 'charge.succeeded':
-        console.log(event.data.object);
+        const charge = event.data.object;
+        this.client.emit('updateOrderReceipt', {
+          orderId: charge.metadata.orderId,
+          paymentId: charge.id,
+          receiptUrl: charge.receipt_url,
+        });
         break;
       default:
     }

@@ -10,10 +10,14 @@ const envSchema = joi
     STRIPE_SECRET_END_POINT_KEY: joi.string().required(),
     SUCCESS_URL: joi.string().required(),
     CANCEL_URL: joi.string().required(),
+    NATS_SERVERS: joi.array().items(joi.string()).required(),
   })
   .unknown(true);
 
-const { error, value: envVars } = envSchema.validate(process.env);
+const { error, value: envVars } = envSchema.validate({
+  ...process.env,
+  NATS_SERVERS: process.env.NATS_SERVERS?.split(','),
+});
 
 if (error) {
   throw new Error(`Config validation error: ${error.message}`);
@@ -26,4 +30,5 @@ export const envConfig = {
   stripeSecretEndPointKey: envVars.STRIPE_SECRET_END_POINT_KEY,
   cancelUrl: envVars.CANCEL_URL,
   successUrl: envVars.SUCCESS_URL,
+  natsServers: envVars.NATS_SERVERS,
 };
